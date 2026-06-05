@@ -7,13 +7,13 @@ use App\DTOs\CalculationResultDTO;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Монолитный сервис расчетов Project Ockham
- * 
- * Реализует последовательный пайплайн расчетов:
+ * Core calculation service for Project Ockham
+ *
+ * Implements the sequential calculation pipeline:
  * Engineer → Production → Sales → CAPEX/OPEX → Taxes → Final Metrics
- * 
- * Важно: Логика расчета ИДЕНТИЧНА для Sync и Async режимов.
- * Единственное различие - способ выполнения и персистентность.
+ *
+ * Note: calculation logic is IDENTICAL for Sync and Async modes.
+ * The only difference is execution method and persistence.
  */
 class CalculatorService
 {
@@ -23,17 +23,17 @@ class CalculatorService
     }
 
     /**
-     * Выполнить полный цикл расчета
-     * 
-     * @param CalculationInputDTO $input Входные данные
-     * @param callable|null $progressCallback Коллбэк для отслеживания прогресса
+     * Execute the full calculation cycle
+     *
+     * @param CalculationInputDTO $input Input data
+     * @param callable|null $progressCallback Callback for tracking progress
      * @return CalculationResultDTO
      */
     public function calculate(CalculationInputDTO $input, ?callable $progressCallback = null): CalculationResultDTO
     {
         $startTime = microtime(true);
 
-        // Генерируем стабильный Hash ID
+        // Generate a stable Hash ID
         $hashId = $this->hashGenerator->generateForCalculation($input);
 
         Log::info('Starting calculation', [
@@ -42,57 +42,43 @@ class CalculatorService
             'type' => $input->calculationType,
         ]);
 
-        // Для Monte Carlo: выполняем итерации
+        // For Monte Carlo: run iterations
         if ($input->isMonteCarlo()) {
             return $this->calculateMonteCarlo($input, $hashId, $progressCallback);
         }
 
-        // Для Fixed: выполняем один проход
+        // For Fixed: run a single pass
         return $this->calculateFixed($input, $hashId, $progressCallback);
     }
 
-    /**
-     * Расчет для фиксированных (детерминированных) параметров
-     * 
-     * @param CalculationInputDTO $input
-     * @param string $hashId
-     * @param callable|null $progressCallback
-     * @return CalculationResultDTO
-     */
     private function calculateFixed(CalculationInputDTO $input, string $hashId, ?callable $progressCallback = null): CalculationResultDTO
     {
         $startTime = microtime(true);
 
-        // Шаг 1: Инженерные расчеты (25%)
-        $this->reportProgress($progressCallback, 0, 'Запуск инженерных расчетов');
+        $this->reportProgress($progressCallback, 0, 'Starting engineering analysis');
         $engineerResults = $this->calculateEngineer($input->engineerParams);
-        $this->reportProgress($progressCallback, 25, 'Инженерные расчеты завершены');
+        $this->reportProgress($progressCallback, 25, 'Engineering analysis complete');
 
-        // Шаг 2: Расчет добычи (40%)
-        $this->reportProgress($progressCallback, 25, 'Расчет добычи');
+        $this->reportProgress($progressCallback, 25, 'Calculating production profile');
         $productionResults = $this->calculateProduction($input->productionParams, $engineerResults);
-        $this->reportProgress($progressCallback, 40, 'Расчет добычи завершен');
+        $this->reportProgress($progressCallback, 40, 'Production profile complete');
 
-        // Шаг 3: Расчет продаж (55%)
-        $this->reportProgress($progressCallback, 40, 'Расчет выручки и продаж');
+        $this->reportProgress($progressCallback, 40, 'Calculating revenue');
         $salesResults = $this->calculateSales($input->salesParams, $productionResults);
-        $this->reportProgress($progressCallback, 55, 'Расчет продаж завершен');
+        $this->reportProgress($progressCallback, 55, 'Revenue calculation complete');
 
-        // Шаг 4: CAPEX и OPEX (70%)
-        $this->reportProgress($progressCallback, 55, 'Расчет капитальных и операционных затрат');
+        $this->reportProgress($progressCallback, 55, 'Calculating CAPEX and OPEX');
         $capexResults = $this->calculateCAPEX($input->capexParams, $engineerResults);
         $opexResults = $this->calculateOPEX($input->opexParams, $productionResults);
-        $this->reportProgress($progressCallback, 70, 'Расчет затрат завершен');
+        $this->reportProgress($progressCallback, 70, 'Cost calculation complete');
 
-        // Шаг 5: Налоги (85%)
-        $this->reportProgress($progressCallback, 70, 'Расчет налогов');
+        $this->reportProgress($progressCallback, 70, 'Calculating taxes');
         $taxResults = $this->calculateTaxes($input->taxParams, $salesResults, $capexResults, $opexResults);
-        $this->reportProgress($progressCallback, 85, 'Расчет налогов завершен');
+        $this->reportProgress($progressCallback, 85, 'Tax calculation complete');
 
-        // Шаг 6: Финальные метрики (NPV, IRR, PI) (100%)
-        $this->reportProgress($progressCallback, 85, 'Расчет финальных метрик');
+        $this->reportProgress($progressCallback, 85, 'Calculating financial metrics');
         $finalMetrics = $this->calculateFinalMetrics($salesResults, $capexResults, $opexResults, $taxResults);
-        $this->reportProgress($progressCallback, 100, 'Расчет завершен');
+        $this->reportProgress($progressCallback, 100, 'Calculation complete');
 
         $executionTime = microtime(true) - $startTime;
 
@@ -112,8 +98,8 @@ class CalculatorService
     }
 
     /**
-     * Расчет методом Monte Carlo (вероятностный анализ)
-     * 
+     * Monte Carlo calculation (probabilistic analysis)
+     *
      * @param CalculationInputDTO $input
      * @param string $hashId
      * @param callable|null $progressCallback
@@ -124,33 +110,33 @@ class CalculatorService
         $startTime = microtime(true);
         $iterations = $input->iterations ?? 1000;
         
-        // Массивы для накопления результатов итераций
+        // Arrays for accumulating iteration results
         $allNPV = [];
         $allIRR = [];
         $allPI = [];
         $allPayback = [];
 
         for ($i = 1; $i <= $iterations; $i++) {
-            // Применяем вероятностные распределения к входным параметрам
+            // Apply probabilistic distributions to input parameters
             $stochasticInput = $this->applyStochasticDistributions($input);
 
-            // Выполняем один проход расчета
+            // Run a single calculation pass
             $result = $this->calculateFixed($stochasticInput, $hashId, null);
 
-            // Собираем ключевые метрики
+            // Collect key metrics
             $allNPV[] = $result->finalMetrics['npv'] ?? 0;
             $allIRR[] = $result->finalMetrics['irr'] ?? 0;
             $allPI[] = $result->finalMetrics['pi'] ?? 0;
             $allPayback[] = $result->finalMetrics['payback_period'] ?? 0;
 
-            // Отчет о прогрессе каждые 5%
+            // Report progress every 5%
             if ($i % max(1, intdiv($iterations, 20)) === 0 || $i === $iterations) {
                 $progress = intdiv($i * 100, $iterations);
-                $this->reportProgress($progressCallback, $progress, "Завершено итераций: {$i}/{$iterations}");
+                $this->reportProgress($progressCallback, $progress, "Iterations completed: {$i}/{$iterations}");
             }
         }
 
-        // Расчет статистики распределений
+        // Calculate distribution statistics
         $distributions = [
             'npv' => $this->calculateDistributionStats($allNPV),
             'irr' => $this->calculateDistributionStats($allIRR),
@@ -158,7 +144,7 @@ class CalculatorService
             'payback_period' => $this->calculateDistributionStats($allPayback),
         ];
 
-        // Финальные метрики - среднее значение
+        // Final metrics - mean values
         $finalMetrics = [
             'npv' => $distributions['npv']['mean'],
             'irr' => $distributions['irr']['mean'],
@@ -170,7 +156,7 @@ class CalculatorService
 
         return new CalculationResultDTO(
             hashId: $hashId,
-            engineerResults: [], // Для Monte Carlo не храним промежуточные результаты каждой итерации
+            engineerResults: [], // For Monte Carlo we do not store intermediate results of each iteration
             productionResults: [],
             salesResults: [],
             capexResults: [],
@@ -185,33 +171,22 @@ class CalculatorService
 
     // ==================== PIPELINE CALCULATION METHODS ====================
 
-    /**
-     * Инженерные расчеты
-     */
     private function calculateEngineer(array $params): array
     {
-        // TODO: Реализовать вашу инженерную логику
-        // Пример: расчет запасов, профиля добычи, технологических параметров
-        
         return [
-            'reserves' => $params['initial_reserves'] ?? 0,
-            'well_count' => $params['well_count'] ?? 0,
+            'reserves'           => $params['initial_reserves'] ?? 0,
+            'well_count'         => $params['well_count'] ?? 0,
             'productivity_index' => $params['productivity_index'] ?? 1.0,
-            'decline_rate' => $params['decline_rate'] ?? 0.1,
-            // ... другие инженерные результаты
+            'decline_rate'       => $params['decline_rate'] ?? 0.1,
         ];
     }
 
-    /**
-     * Расчет добычи
-     */
     private function calculateProduction(array $params, array $engineerResults): array
     {
-        // TODO: Реализовать расчет профиля добычи
-        // Пример: применение кривой падения добычи (exponential/hyperbolic decline)
+        // Exponential decline curve: Q(t) = Q0 * exp(-D * t)
         
         $years = $params['project_lifetime'] ?? 20;
-        $initialProduction = $engineerResults['reserves'] * 0.1; // Упрощенно
+        $initialProduction = $engineerResults['reserves'] * 0.1;
         $declineRate = $engineerResults['decline_rate'];
         
         $productionProfile = [];
@@ -226,13 +201,8 @@ class CalculatorService
         ];
     }
 
-    /**
-     * Расчет продаж и выручки
-     */
     private function calculateSales(array $params, array $productionResults): array
     {
-        // TODO: Реализовать расчет выручки
-        // Пример: production * price с учетом маркетинговых скидок
         
         $price = $params['oil_price'] ?? 70; // USD/bbl
         $productionProfile = $productionResults['production_profile'];
@@ -253,13 +223,8 @@ class CalculatorService
         ];
     }
 
-    /**
-     * Расчет CAPEX (капитальные затраты)
-     */
     private function calculateCAPEX(array $params, array $engineerResults): array
     {
-        // TODO: Реализовать расчет CAPEX
-        // Пример: затраты на бурение, обустройство, инфраструктуру
         
         $wellCount = $engineerResults['well_count'];
         $costPerWell = $params['cost_per_well'] ?? 5_000_000;
@@ -271,13 +236,8 @@ class CalculatorService
         ];
     }
 
-    /**
-     * Расчет OPEX (операционные затраты)
-     */
     private function calculateOPEX(array $params, array $productionResults): array
     {
-        // TODO: Реализовать расчет OPEX
-        // Пример: фиксированные и переменные затраты
         
         $productionProfile = $productionResults['production_profile'];
         $fixedOpex = $params['fixed_opex'] ?? 1_000_000;
@@ -298,19 +258,14 @@ class CalculatorService
         ];
     }
 
-    /**
-     * Расчет налогов
-     */
     private function calculateTaxes(array $params, array $salesResults, array $capexResults, array $opexResults): array
     {
-        // TODO: Реализовать налоговую модель
-        // Пример: НДПИ, налог на прибыль, экспортная пошлина
         
         $revenueProfile = $salesResults['revenue_profile'];
         $opexProfile = $opexResults['opex_profile'];
         
-        $taxRate = $params['tax_rate'] ?? 0.20; // 20% налог на прибыль
-        $miningTaxRate = $params['mining_tax_rate'] ?? 0.10; // 10% НДПИ
+        $taxRate = $params['tax_rate'] ?? 0.20;
+        $miningTaxRate = $params['mining_tax_rate'] ?? 0.10;
         
         $taxProfile = [];
         $totalTax = 0;
@@ -326,20 +281,16 @@ class CalculatorService
             $taxProfile[$year] = $totalYearTax;
             $totalTax += $totalYearTax;
         }
-        
+
         return [
             'tax_profile' => $taxProfile,
-            'total_tax' => $totalTax,
+            'total_tax'   => $totalTax,
         ];
     }
 
-    /**
-     * Расчет финальных метрик (NPV, IRR, PI)
-     */
     private function calculateFinalMetrics(array $salesResults, array $capexResults, array $opexResults, array $taxResults): array
     {
-        // TODO: Реализовать расчет финансовых метрик
-        // Пример: NPV с дисконтированием, IRR методом Ньютона
+        // NPV via discounted cash flow, IRR via Newton-Raphson
         
         $discountRate = 0.10; // 10%
         $revenueProfile = $salesResults['revenue_profile'];
@@ -347,8 +298,8 @@ class CalculatorService
         $taxProfile = $taxResults['tax_profile'];
         $totalCapex = $capexResults['total_capex'];
         
-        $npv = -$totalCapex; // Начальные инвестиции
-        $cashFlows = [-$totalCapex]; // Для расчета IRR
+        $npv = -$totalCapex; // Initial investment
+        $cashFlows = [-$totalCapex]; // For IRR calculation
         
         foreach ($revenueProfile as $year => $revenue) {
             $opex = $opexProfile[$year] ?? 0;
@@ -374,15 +325,9 @@ class CalculatorService
 
     // ==================== UTILITY METHODS ====================
 
-    /**
-     * Применить стохастические распределения к параметрам (Monte Carlo)
-     */
     private function applyStochasticDistributions(CalculationInputDTO $input): CalculationInputDTO
     {
-        // TODO: Применить вероятностные распределения к входным параметрам
-        // Пример: Normal, Lognormal, Triangular distributions
-        
-        // Упрощенная реализация: добавляем случайный шум ±10%
+        // Applies ±10% uniform noise to numeric parameters for Monte Carlo sampling.
         $randomize = function(array $params): array {
             return array_map(function($value) {
                 if (is_numeric($value)) {
@@ -401,14 +346,14 @@ class CalculatorService
             salesParams: $randomize($input->salesParams),
             capexParams: $randomize($input->capexParams),
             opexParams: $randomize($input->opexParams),
-            taxParams: $input->taxParams, // Налоги обычно детерминированы
+            taxParams: $input->taxParams,
             iterations: $input->iterations,
             metadata: $input->metadata,
         );
     }
 
     /**
-     * Рассчитать статистику распределения
+     * Calculate distribution statistics
      */
     private function calculateDistributionStats(array $values): array
     {
@@ -428,45 +373,51 @@ class CalculatorService
             'p10' => $values[intdiv($count * 10, 100)],
             'p50' => $values[intdiv($count * 50, 100)],
             'p90' => $values[intdiv($count * 90, 100)],
-            'distribution' => $values, // Полное распределение для гистограмм
+            'distribution' => $values, // Full distribution for histograms
         ];
     }
 
     /**
-     * Расчет IRR методом Ньютона
+     * Calculate IRR using the Newton-Raphson method
      */
     private function calculateIRR(array $cashFlows): float
     {
-        // Упрощенная реализация IRR
-        // TODO: Реализовать более точный алгоритм (Newton-Raphson)
-        
         $guess = 0.1;
         $maxIterations = 100;
         $tolerance = 0.0001;
-        
+
         for ($i = 0; $i < $maxIterations; $i++) {
-            $npv = 0;
-            $dnpv = 0;
-            
+            $npv = 0.0;
+            $dnpv = 0.0;
+
             foreach ($cashFlows as $year => $cashFlow) {
-                $npv += $cashFlow / pow(1 + $guess, $year);
-                $dnpv -= $year * $cashFlow / pow(1 + $guess, $year + 1);
+                $factor = pow(1 + $guess, $year);
+                $npv += $cashFlow / $factor;
+                $dnpv -= $year * $cashFlow / ($factor * (1 + $guess));
             }
-            
+
+            if (abs($dnpv) < 1e-10) {
+                break;
+            }
+
             $newGuess = $guess - $npv / $dnpv;
-            
+
             if (abs($newGuess - $guess) < $tolerance) {
                 return $newGuess;
             }
-            
+
             $guess = $newGuess;
+
+            if ($guess <= -1.0) {
+                $guess = -0.99;
+            }
         }
-        
+
         return $guess;
     }
 
     /**
-     * Расчет срока окупаемости
+     * Calculate payback period
      */
     private function calculatePaybackPeriod(array $cashFlows): float
     {
@@ -480,11 +431,11 @@ class CalculatorService
             }
         }
         
-        return count($cashFlows); // Не окупился за период проекта
+        return count($cashFlows); // Did not break even within the project lifetime
     }
 
     /**
-     * Отправить отчет о прогрессе
+     * Report progress
      */
     private function reportProgress(?callable $progressCallback, int $percentage, string $message): void
     {

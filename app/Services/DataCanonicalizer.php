@@ -3,27 +3,27 @@
 namespace App\Services;
 
 /**
- * Сервис канонизации данных для стабильного хэширования
- * 
- * Решает проблему нестабильности хэшей из-за:
- * - Разного порядка ключей в JSON
- * - Различий в точности float-значений
- * - Непоследовательной обработки null-значений
- * 
- * Гарантирует, что одинаковые данные всегда дают одинаковый hash.
+ * Data canonicalization service for stable hashing
+ *
+ * Solves hash instability caused by:
+ * - Different key ordering in JSON
+ * - Differences in float precision
+ * - Inconsistent handling of null values
+ *
+ * Guarantees that identical data always produces the same hash.
  */
 class DataCanonicalizer
 {
     /**
-     * Точность для округления float-значений
+     * Precision for rounding float values
      */
     private const FLOAT_PRECISION = 10;
 
     /**
-     * Канонизировать данные для хэширования
-     * 
-     * @param mixed $data Исходные данные
-     * @return string Канонизированная строка для хэширования
+     * Canonicalize data for hashing
+     *
+     * @param mixed $data Source data
+     * @return string Canonicalized string ready for hashing
      */
     public function canonicalize(mixed $data): string
     {
@@ -32,44 +32,44 @@ class DataCanonicalizer
     }
 
     /**
-     * Нормализовать данные рекурсивно
-     * 
+     * Recursively normalize data
+     *
      * @param mixed $data
      * @return mixed
      */
     private function normalize(mixed $data): mixed
     {
-        // Обработка null
+        // Handle null
         if ($data === null) {
             return null;
         }
 
-        // Обработка boolean
+        // Handle boolean
         if (is_bool($data)) {
             return $data;
         }
 
-        // Обработка float с нормализацией точности
+        // Handle float with precision normalization
         if (is_float($data)) {
             return $this->normalizeFloat($data);
         }
 
-        // Обработка целых чисел
+        // Handle integers
         if (is_int($data)) {
             return $data;
         }
 
-        // Обработка строк
+        // Handle strings
         if (is_string($data)) {
             return trim($data);
         }
 
-        // Обработка массивов
+        // Handle arrays
         if (is_array($data)) {
             return $this->normalizeArray($data);
         }
 
-        // Обработка объектов (конвертация в массив)
+        // Handle objects (convert to array)
         if (is_object($data)) {
             return $this->normalizeArray((array) $data);
         }
@@ -78,16 +78,16 @@ class DataCanonicalizer
     }
 
     /**
-     * Нормализовать float с фиксированной точностью
-     * 
-     * Решает проблему: 0.1 + 0.2 !== 0.3 в PHP
-     * 
+     * Normalize a float to a fixed precision
+     *
+     * Addresses the issue: 0.1 + 0.2 !== 0.3 in PHP
+     *
      * @param float $value
      * @return float
      */
     private function normalizeFloat(float $value): float
     {
-        // Обработка специальных значений
+        // Handle special values
         if (is_nan($value)) {
             return 0.0;
         }
@@ -96,36 +96,36 @@ class DataCanonicalizer
             return $value > 0 ? PHP_FLOAT_MAX : -PHP_FLOAT_MAX;
         }
 
-        // Округление до фиксированной точности
+        // Round to fixed precision
         return round($value, self::FLOAT_PRECISION);
     }
 
     /**
-     * Нормализовать массив с сортировкой ключей
-     * 
+     * Normalize an array with sorted keys
+     *
      * @param array $array
      * @return array
      */
     private function normalizeArray(array $array): array
     {
-        // Проверка, является ли массив ассоциативным
+        // Check whether the array is associative
         $isAssociative = $this->isAssociativeArray($array);
 
         if ($isAssociative) {
-            // Удаляем null-значения (опционально, зависит от требований)
+            // Remove null values (optional, depends on requirements)
             // $array = array_filter($array, fn($value) => $value !== null);
 
-            // Сортируем ключи для детерминированного порядка
+            // Sort keys for deterministic ordering
             ksort($array);
         }
 
-        // Рекурсивно нормализуем значения
+        // Recursively normalize values
         return array_map(fn($value) => $this->normalize($value), $array);
     }
 
     /**
-     * Проверить, является ли массив ассоциативным
-     * 
+     * Check whether an array is associative
+     *
      * @param array $array
      * @return bool
      */
@@ -139,8 +139,8 @@ class DataCanonicalizer
     }
 
     /**
-     * Сгенерировать Hash ID из данных
-     * 
+     * Generate a Hash ID from data
+     *
      * @param mixed $data
      * @return string SHA-256 hash
      */
@@ -151,8 +151,8 @@ class DataCanonicalizer
     }
 
     /**
-     * Проверить, совпадают ли два набора данных после канонизации
-     * 
+     * Check whether two data sets are equal after canonicalization
+     *
      * @param mixed $data1
      * @param mixed $data2
      * @return bool

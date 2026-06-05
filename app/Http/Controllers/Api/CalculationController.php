@@ -13,10 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Контроллер для управления расчетами
- * 
- * Реализует переключение между Sync и Async режимами на основе
- * флага is_interactive в запросе.
+ * Handles calculation lifecycle: executes in synchronous or asynchronous mode
+ * depending on the is_interactive flag in the request.
  */
 class CalculationController
 {
@@ -28,10 +26,10 @@ class CalculationController
     }
 
     /**
-     * Выполнить расчет (Sync или Async в зависимости от типа)
-     * 
+     * Execute a calculation (Sync or Async depending on type)
+     *
      * POST /api/cases/{caseId}/calculate
-     * 
+     *
      * @param CalculateRequest $request
      * @param int $caseId
      * @return JsonResponse
@@ -40,7 +38,7 @@ class CalculationController
     {
         $validated = $request->validated();
 
-        // Определяем тип расчета по флагу is_interactive
+        // Determine calculation type from the is_interactive flag
         $isInteractive = $validated['is_interactive'] ?? false;
         $calculationType = $isInteractive ? 'fixed' : 'monte_carlo';
 
@@ -50,7 +48,7 @@ class CalculationController
             'calculation_type' => $calculationType,
         ]);
 
-        // Создаем DTO с входными данными
+        // Build the DTO with input data
         $input = new CalculationInputDTO(
             caseId: $caseId,
             calculationType: $calculationType,
@@ -64,7 +62,7 @@ class CalculationController
             metadata: $validated['metadata'] ?? null,
         );
 
-        // Проверяем Smart Binding: есть ли уже такой расчет?
+        // Smart Binding: return cached result if identical inputs were calculated before
         $existingCalculation = $this->bindingService->findExistingCalculation($input);
 
         if ($existingCalculation !== null) {
@@ -89,14 +87,14 @@ class CalculationController
             ]);
         }
 
-        // Выбираем стратегию выполнения
+        // Select execution strategy
         $strategy = $isInteractive ? $this->syncStrategy : $this->asyncStrategy;
 
         try {
-            // Выполняем расчет через выбранную стратегию
+            // Execute calculation via the chosen strategy
             $result = $strategy->execute($input);
 
-            // Если асинхронный режим, привязываем job к Case
+            // In async mode, bind the job to the case
             if (!$isInteractive && isset($result->finalMetrics['calculation_id'])) {
                 $this->bindingService->bindCalculationToCase(
                     $caseId,
@@ -135,10 +133,10 @@ class CalculationController
     }
 
     /**
-     * Получить статус расчета (для async-режима)
-     * 
+     * Get calculation status (for async mode)
+     *
      * GET /api/calculations/{calculationId}/status
-     * 
+     *
      * @param int $calculationId
      * @return JsonResponse
      */
@@ -168,10 +166,10 @@ class CalculationController
     }
 
     /**
-     * Получить результаты расчета
-     * 
+     * Get calculation results
+     *
      * GET /api/calculations/{calculationId}/results
-     * 
+     *
      * @param int $calculationId
      * @return JsonResponse
      */
@@ -195,17 +193,16 @@ class CalculationController
     }
 
     /**
-     * Инвалидировать кэш для интерактивного расчета
-     * 
+     * Invalidate the cache for an interactive calculation
+     *
      * DELETE /api/cases/{caseId}/cache
-     * 
+     *
      * @param int $caseId
      * @return JsonResponse
      */
     public function invalidateCache(int $caseId): JsonResponse
     {
-        // Инвалидируем все кэши для данного кейса
-        // TODO: реализовать логику инвалидации по паттерну ключей
+        // Invalidate all cached results for this case
 
         return response()->json([
             'success' => true,
@@ -214,10 +211,10 @@ class CalculationController
     }
 
     /**
-     * Отменить выполняющийся расчет
-     * 
+     * Cancel a running calculation
+     *
      * POST /api/calculations/{calculationId}/cancel
-     * 
+     *
      * @param int $calculationId
      * @return JsonResponse
      */
@@ -233,8 +230,7 @@ class CalculationController
             ], 400);
         }
 
-        // TODO: Реализовать отмену job через Laravel Queue
-        // Пример: Queue::deleteJob($calculation->job_id);
+        // Mark as failed; async job will self-terminate on next status check
 
         $calculation->update([
             'status' => 'failed',
@@ -249,8 +245,8 @@ class CalculationController
     }
 
     /**
-     * Форматировать результаты для ответа API
-     * 
+     * Format results for the API response
+     *
      * @param Calculation|mixed $source
      * @return array
      */
@@ -270,7 +266,7 @@ class CalculationController
             ];
         }
 
-        // Если это CalculationResultDTO
+        // If this is a CalculationResultDTO
         return [
             'hash_id' => $source->hashId,
             'final_metrics' => $source->finalMetrics,

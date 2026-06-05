@@ -9,9 +9,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Событие обновления прогресса расчета
- * 
- * Транслируется через WebSocket для real-time обновления UI
+ * Event fired when calculation progress is updated
+ *
+ * Broadcast over WebSocket for real-time UI updates
  */
 class CalculationProgressUpdated implements ShouldBroadcast
 {
@@ -26,7 +26,7 @@ class CalculationProgressUpdated implements ShouldBroadcast
     }
 
     /**
-     * Канал для broadcasting
+     * Broadcasting channel
      */
     public function broadcastOn(): Channel
     {
@@ -34,7 +34,7 @@ class CalculationProgressUpdated implements ShouldBroadcast
     }
 
     /**
-     * Имя события
+     * Event name
      */
     public function broadcastAs(): string
     {
@@ -42,7 +42,7 @@ class CalculationProgressUpdated implements ShouldBroadcast
     }
 
     /**
-     * Данные для broadcast
+     * Data payload for the broadcast
      */
     public function broadcastWith(): array
     {

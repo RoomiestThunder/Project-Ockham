@@ -6,40 +6,40 @@ use App\DTOs\CalculationInputDTO;
 use App\DTOs\CalculationResultDTO;
 
 /**
- * Интерфейс стратегии расчета
- * 
- * Унифицирует синхронное и асинхронное выполнение расчетов.
- * Обе стратегии используют одну и ту же бизнес-логику,
- * но отличаются способом выполнения и персистентностью.
+ * Calculation strategy interface
+ *
+ * Unifies synchronous and asynchronous calculation execution.
+ * Both strategies share the same business logic
+ * but differ in execution method and persistence.
  */
 interface CalculationStrategyInterface
 {
     /**
-     * Выполнить расчет
-     * 
-     * @param CalculationInputDTO $input Входные данные для расчета
-     * @param callable|null $progressCallback Коллбэк для отслеживания прогресса (опционально)
-     * @return CalculationResultDTO Результат расчета
+     * Execute the calculation
+     *
+     * @param CalculationInputDTO $input Input data for the calculation
+     * @param callable|null $progressCallback Optional callback for tracking progress
+     * @return CalculationResultDTO Calculation result
      */
     public function execute(CalculationInputDTO $input, ?callable $progressCallback = null): CalculationResultDTO;
 
     /**
-     * Проверить, поддерживает ли стратегия персистентность в БД
-     * 
+     * Check whether the strategy supports persistence to the database
+     *
      * @return bool
      */
     public function shouldPersist(): bool;
 
     /**
-     * Проверить, использует ли стратегия кэширование
-     * 
+     * Check whether the strategy uses caching
+     *
      * @return bool
      */
     public function shouldCache(): bool;
 
     /**
-     * Получить имя стратегии для логирования
-     * 
+     * Get the strategy name for logging
+     *
      * @return string
      */
     public function getName(): string;

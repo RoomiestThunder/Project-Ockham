@@ -11,17 +11,17 @@ use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Синхронная стратегия расчета (Fixed/Interactive Mode)
- * 
- * Используется для интерактивных расчетов (UI слайдеры).
- * - Выполняется в контексте HTTP-запроса
- * - НЕ пишет в БД
- * - Кэширует результаты в Redis (TTL 1 час)
- * - Возвращает результат немедленно
+ * Synchronous calculation strategy (Fixed/Interactive mode)
+ *
+ * Used for interactive calculations (UI sliders).
+ * - Executes within the HTTP request context
+ * - Does NOT write to the database
+ * - Caches results in Redis (TTL 1 hour)
+ * - Returns the result immediately
  */
 class SynchronousCalculationStrategy implements CalculationStrategyInterface
 {
-    private const CACHE_TTL = 3600; // 1 час
+    private const CACHE_TTL = 3600; // 1 hour
 
     public function __construct(
         private readonly CalculatorService $calculator
@@ -30,7 +30,7 @@ class SynchronousCalculationStrategy implements CalculationStrategyInterface
 
     public function execute(CalculationInputDTO $input, ?callable $progressCallback = null): CalculationResultDTO
     {
-        // Проверяем кэш
+        // Check cache
         $cacheKey = $this->getCacheKey($input);
         $cached = Redis::get($cacheKey);
 
@@ -43,14 +43,14 @@ class SynchronousCalculationStrategy implements CalculationStrategyInterface
             return unserialize($cached);
         }
 
-        // Выполняем расчет
+        // Execute calculation
         Log::info('Executing synchronous calculation', [
             'case_id' => $input->caseId,
         ]);
 
         $result = $this->calculator->calculate($input, $progressCallback);
 
-        // Кэшируем результат
+        // Cache the result
         Redis::setex($cacheKey, self::CACHE_TTL, serialize($result));
 
         Log::info('Calculation completed and cached', [
@@ -63,12 +63,12 @@ class SynchronousCalculationStrategy implements CalculationStrategyInterface
 
     public function shouldPersist(): bool
     {
-        return false; // Синхронный режим НЕ пишет в БД
+        return false; // Sync mode does NOT write to the database
     }
 
     public function shouldCache(): bool
     {
-        return true; // Синхронный режим использует Redis кэш
+        return true; // Sync mode uses Redis cache
     }
 
     public function getName(): string
@@ -77,7 +77,7 @@ class SynchronousCalculationStrategy implements CalculationStrategyInterface
     }
 
     /**
-     * Генерация ключа кэша
+     * Generate cache key
      */
     private function getCacheKey(CalculationInputDTO $input): string
     {
@@ -86,7 +86,7 @@ class SynchronousCalculationStrategy implements CalculationStrategyInterface
     }
 
     /**
-     * Инвалидировать кэш для данного расчета
+     * Invalidate the cache for a given calculation
      */
     public function invalidateCache(CalculationInputDTO $input): void
     {

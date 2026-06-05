@@ -16,31 +16,31 @@ use Illuminate\Support\Facades\Redis;
 use Throwable;
 
 /**
- * Job для асинхронного выполнения Monte Carlo расчетов
- * 
- * Особенности:
- * - Выполняется через Laravel Queue (Redis/Database)
- * - Поддерживает прогресс-трекинг через Redis
- * - Транслирует прогресс через WebSockets (broadcasting)
- * - Обрабатывает ошибки и retry-логику
- * - Записывает результаты в БД
+ * Job for asynchronous execution of Monte Carlo calculations
+ *
+ * Features:
+ * - Runs via Laravel Queue (Redis/Database)
+ * - Supports progress tracking via Redis
+ * - Broadcasts progress over WebSockets
+ * - Handles errors and retry logic
+ * - Persists results to the database
  */
 class RunMonteCarloCalculation implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * Количество попыток выполнения при ошибке
+     * Number of execution attempts on failure
      */
     public int $tries = 3;
 
     /**
-     * Таймаут выполнения (секунды)
+     * Execution timeout (seconds)
      */
-    public int $timeout = 3600; // 1 час для больших Monte Carlo
+    public int $timeout = 3600; // 1 hour for large Monte Carlo runs
 
     /**
-     * Задержка между retry (секунды)
+     * Delay between retries (seconds)
      */
     public int $backoff = 60;
 
@@ -51,7 +51,7 @@ class RunMonteCarloCalculation implements ShouldQueue
     }
 
     /**
-     * Выполнить job
+     * Execute the job
      */
     public function handle(CalculatorService $calculator): void
     {
@@ -64,22 +64,22 @@ class RunMonteCarloCalculation implements ShouldQueue
                 'iterations' => $this->input->iterations,
             ]);
 
-            // Обновляем статус
+            // Update status
             $calculation->update([
                 'status' => 'processing',
                 'started_at' => now(),
             ]);
 
-            // Отправляем начальный прогресс
-            $this->updateProgress($calculation, 0, 'Инициализация расчета');
+            // Send initial progress
+            $this->updateProgress($calculation, 0, 'Initializing calculation');
 
-            // Выполняем расчет с коллбэком прогресса
+            // Execute calculation with progress callback
             $result = $calculator->calculate(
                 $this->input,
                 fn($percentage, $message) => $this->updateProgress($calculation, $percentage, $message)
             );
 
-            // Сохраняем результаты в БД
+            // Persist results to the database
             $this->saveResults($calculation, $result);
 
             Log::info('Monte Carlo calculation completed', [
@@ -90,16 +90,16 @@ class RunMonteCarloCalculation implements ShouldQueue
 
         } catch (Throwable $e) {
             $this->handleFailure($calculation, $e);
-            throw $e; // Пробрасываем для retry механизма
+            throw $e; // Re-throw for the retry mechanism
         }
     }
 
     /**
-     * Обновить прогресс в Redis и WebSocket
+     * Update progress in Redis and broadcast via WebSocket
      */
     private function updateProgress(Calculation $calculation, int $percentage, string $message): void
     {
-        // Обновляем прогресс в Redis (для быстрого доступа)
+        // Update progress in Redis (for fast access)
         $progressKey = "calc:progress:{$calculation->id}";
         $progressData = [
             'calculation_id' => $calculation->id,
@@ -109,9 +109,9 @@ class RunMonteCarloCalculation implements ShouldQueue
             'timestamp' => now()->timestamp,
         ];
 
-        Redis::setex($progressKey, 300, json_encode($progressData)); // TTL 5 минут
+        Redis::setex($progressKey, 300, json_encode($progressData)); // TTL 5 minutes
 
-        // Обновляем процент в БД (каждые 5%)
+        // Update percentage in the database (every 5%)
         if ($percentage % 5 === 0 || $percentage === 100) {
             $calculation->update([
                 'progress_percentage' => $percentage,
@@ -119,8 +119,8 @@ class RunMonteCarloCalculation implements ShouldQueue
             ]);
         }
 
-        // Транслируем прогресс через WebSocket (Laravel Broadcasting)
-        // Предполагается, что у вас настроен Laravel Echo + Pusher/Soketi
+        // Broadcast progress via WebSocket (Laravel Broadcasting)
+        // Assumes Laravel Echo + Pusher/Soketi is configured
         broadcast(new \App\Events\CalculationProgressUpdated(
             calculationId: $calculation->id,
             caseId: $this->input->caseId,
@@ -136,7 +136,7 @@ class RunMonteCarloCalculation implements ShouldQueue
     }
 
     /**
-     * Сохранить результаты расчета в БД
+     * Persist calculation results to the database
      */
     private function saveResults(Calculation $calculation, $result): void
     {
@@ -144,12 +144,12 @@ class RunMonteCarloCalculation implements ShouldQueue
             $calculation->update([
                 'status' => 'completed',
                 'progress_percentage' => 100,
-                'progress_message' => 'Расчет завершен',
+                'progress_message' => 'Calculation completed',
                 'completed_at' => now(),
                 'iterations_completed' => $result->iterationsCompleted,
                 'execution_time_seconds' => $result->executionTimeSeconds,
                 
-                // Сохраняем все результаты в JSON-колонки
+                // Save all results into JSON columns
                 'engineer_results' => $result->engineerResults,
                 'production_results' => $result->productionResults,
                 'sales_results' => $result->salesResults,
@@ -160,7 +160,7 @@ class RunMonteCarloCalculation implements ShouldQueue
                 'distributions' => $result->distributions,
             ]);
 
-            // Обновляем last_job_id в Case для Smart Binding
+            // Update last_job_id on the case for Smart Binding
             DB::table('cases')
                 ->where('id', $this->input->caseId)
                 ->update([
@@ -170,19 +170,19 @@ class RunMonteCarloCalculation implements ShouldQueue
                 ]);
         });
 
-        // Отправляем финальное событие о завершении
+        // Dispatch the final completion event
         broadcast(new \App\Events\CalculationCompleted(
             calculationId: $calculation->id,
             caseId: $this->input->caseId,
             results: $result->getKeyMetrics(),
         ))->toOthers();
 
-        // Очищаем прогресс из Redis
+        // Clear progress from Redis
         Redis::del("calc:progress:{$calculation->id}");
     }
 
     /**
-     * Обработать ошибку выполнения
+     * Handle an execution error
      */
     private function handleFailure(Calculation $calculation, Throwable $e): void
     {
@@ -195,25 +195,25 @@ class RunMonteCarloCalculation implements ShouldQueue
 
         $calculation->update([
             'status' => 'failed',
-            'progress_message' => 'Ошибка: ' . $e->getMessage(),
+            'progress_message' => 'Error: ' . $e->getMessage(),
             'failed_at' => now(),
             'error_message' => $e->getMessage(),
             'error_trace' => $e->getTraceAsString(),
         ]);
 
-        // Отправляем событие об ошибке
+        // Dispatch the failure event
         broadcast(new \App\Events\CalculationFailed(
             calculationId: $calculation->id,
             caseId: $this->input->caseId,
             error: $e->getMessage(),
         ))->toOthers();
 
-        // Очищаем прогресс из Redis
+        // Clear progress from Redis
         Redis::del("calc:progress:{$calculation->id}");
     }
 
     /**
-     * Хук при окончательной неудаче (после всех retry)
+     * Hook called on final failure (after all retries are exhausted)
      */
     public function failed(Throwable $exception): void
     {
@@ -222,7 +222,7 @@ class RunMonteCarloCalculation implements ShouldQueue
         if ($calculation) {
             $calculation->update([
                 'status' => 'permanently_failed',
-                'progress_message' => 'Расчет не удался после нескольких попыток',
+                'progress_message' => 'Calculation failed after multiple attempts',
                 'failed_at' => now(),
             ]);
         }
@@ -234,7 +234,7 @@ class RunMonteCarloCalculation implements ShouldQueue
     }
 
     /**
-     * Получить теги для Laravel Horizon
+     * Get tags for Laravel Horizon
      */
     public function tags(): array
     {

@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * Модель Calculation
- * 
- * Представляет один расчет (Fixed или Monte Carlo).
- * Хранит все промежуточные и финальные результаты.
+ * Calculation model
+ *
+ * Represents a single calculation (Fixed or Monte Carlo).
+ * Stores all intermediate and final results.
  */
 class Calculation extends Model
 {
@@ -66,7 +66,7 @@ class Calculation extends Model
     ];
 
     /**
-     * Связь с кейсом
+     * Relationship to the case
      */
     public function case(): BelongsTo
     {
@@ -74,7 +74,7 @@ class Calculation extends Model
     }
 
     /**
-     * Scope: только завершенные расчеты
+     * Scope: completed calculations only
      */
     public function scopeCompleted($query)
     {
@@ -82,7 +82,7 @@ class Calculation extends Model
     }
 
     /**
-     * Scope: только активные расчеты (не помеченные на удаление)
+     * Scope: active calculations only (not marked for deletion)
      */
     public function scopeActive($query)
     {
@@ -90,7 +90,7 @@ class Calculation extends Model
     }
 
     /**
-     * Scope: расчеты для очистки
+     * Scope: calculations due for cleanup
      */
     public function scopeForCleanup($query)
     {
@@ -99,7 +99,7 @@ class Calculation extends Model
     }
 
     /**
-     * Проверить, завершен ли расчет
+     * Check whether the calculation is completed
      */
     public function isCompleted(): bool
     {
@@ -107,7 +107,7 @@ class Calculation extends Model
     }
 
     /**
-     * Проверить, выполняется ли расчет
+     * Check whether the calculation is in progress
      */
     public function isProcessing(): bool
     {
@@ -115,7 +115,7 @@ class Calculation extends Model
     }
 
     /**
-     * Проверить, провален ли расчет
+     * Check whether the calculation has failed
      */
     public function isFailed(): bool
     {
@@ -123,7 +123,7 @@ class Calculation extends Model
     }
 
     /**
-     * Получить ключевые метрики
+     * Get key metrics
      */
     public function getKeyMetrics(): array
     {

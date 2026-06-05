@@ -9,10 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Модель Case (проект/кейс)
- * 
- * Представляет один проект нефтегазового моделирования.
- * Содержит связь с расчетами и последним актуальным расчетом.
+ * Case model (project/case)
+ *
+ * Represents a single oil-and-gas modelling project.
+ * Holds the relationship to calculations and the most recent active calculation.
  */
 class CaseModel extends Model
 {
@@ -34,7 +34,7 @@ class CaseModel extends Model
     ];
 
     /**
-     * Все расчеты кейса
+     * All calculations for this case
      */
     public function calculations(): HasMany
     {
@@ -42,7 +42,7 @@ class CaseModel extends Model
     }
 
     /**
-     * Последний актуальный расчет
+     * The most recent active calculation
      */
     public function lastCalculation(): BelongsTo
     {
@@ -50,7 +50,7 @@ class CaseModel extends Model
     }
 
     /**
-     * Активные (не помеченные на удаление) расчеты
+     * Active calculations (not marked for deletion)
      */
     public function activeCalculations(): HasMany
     {
@@ -58,7 +58,7 @@ class CaseModel extends Model
     }
 
     /**
-     * Завершенные расчеты
+     * Completed calculations
      */
     public function completedCalculations(): HasMany
     {

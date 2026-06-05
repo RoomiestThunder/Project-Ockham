@@ -36,7 +36,7 @@ The system implements a sequential calculation pipeline:
 ## Tech Stack
 
 ### Backend
-- PHP 8.3+
+- PHP 8.4+
 - Laravel 11.x
 - MySQL 8.0+ / MariaDB 10.5+
 - Redis 7.0+
@@ -61,7 +61,7 @@ The system implements a sequential calculation pipeline:
 
 ```bash
 # Clone the repository
-git clone <repository-url> project-ockham
+git clone https://github.com/RoomiestThunder/project-ockham.git project-ockham
 cd project-ockham
 
 # Build and start containers
@@ -83,7 +83,7 @@ docker-compose exec app php artisan horizon
 ### Manual Installation
 
 #### Prerequisites
-- PHP 8.3+ with extensions: mbstring, pdo_mysql, redis, bcmath
+- PHP 8.4+ with extensions: mbstring, pdo_mysql, redis, bcmath
 - MySQL 8.0+ or MariaDB 10.5+
 - Redis 7.0+
 - Composer 2.x

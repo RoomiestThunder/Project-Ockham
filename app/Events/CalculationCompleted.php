@@ -9,7 +9,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Событие успешного завершения расчета
+ * Event fired when a calculation completes successfully
  */
 class CalculationCompleted implements ShouldBroadcast
 {

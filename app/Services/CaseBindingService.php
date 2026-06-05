@@ -10,23 +10,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Сервис "умной привязки" расчетов к кейсам (Smart Binding)
- * 
- * Реализует логику:
- * 1. Поиск существующих расчетов по Hash ID (дедупликация)
- * 2. Привязка расчетов к Case через last_calculation_id
- * 3. Grace Period для отвязки старых расчетов (7 дней)
- * 4. Автоматическая очистка "мусора"
+ * Smart binding service for linking calculations to cases
+ *
+ * Implements the following logic:
+ * 1. Look up existing calculations by Hash ID (deduplication)
+ * 2. Bind calculations to a case via last_calculation_id
+ * 3. Grace period before detaching old calculations (7 days)
+ * 4. Automatic cleanup of stale records
  */
 class CaseBindingService
 {
     /**
-     * Grace Period для отвязки (дни)
+     * Grace period before detachment (days)
      */
     private const GRACE_PERIOD_DAYS = 7;
 
     /**
-     * Период до физического удаления после отвязки (дни)
+     * Period until physical deletion after detachment (days)
      */
     private const DELETE_AFTER_DAYS = 30;
 
@@ -36,11 +36,11 @@ class CaseBindingService
     }
 
     /**
-     * Найти существующий завершенный расчет по входным данным
-     * 
-     * Использует Hash ID для поиска идентичных расчетов.
-     * Возвращает null, если ничего не найдено.
-     * 
+     * Find an existing completed calculation by input data
+     *
+     * Uses Hash ID to look up identical calculations.
+     * Returns null if nothing is found.
+     *
      * @param CalculationInputDTO $input
      * @return Calculation|null
      */
@@ -48,11 +48,11 @@ class CaseBindingService
     {
         $hashId = $this->hashGenerator->generateForCalculation($input);
 
-        // Ищем завершенный расчет с таким же Hash ID
+        // Look for a completed calculation with the same Hash ID
         $calculation = Calculation::query()
             ->where('hash_id', $hashId)
             ->where('status', 'completed')
-            ->whereNull('delete_at') // Не помеченные на удаление
+            ->whereNull('delete_at') // Not marked for deletion
             ->latest('completed_at')
             ->first();
 
@@ -68,11 +68,11 @@ class CaseBindingService
     }
 
     /**
-     * Привязать расчет к кейсу
-     * 
-     * Обновляет last_calculation_id в кейсе.
-     * Если есть предыдущий расчет, отвязывает его с Grace Period.
-     * 
+     * Bind a calculation to a case
+     *
+     * Updates last_calculation_id on the case.
+     * If a previous calculation exists, schedules its detachment with a grace period.
+     *
      * @param int $caseId
      * @param int $calculationId
      * @return void
@@ -83,12 +83,12 @@ class CaseBindingService
             $case = CaseModel::findOrFail($caseId);
             $calculation = Calculation::findOrFail($calculationId);
 
-            // Если есть предыдущий расчет, планируем его отвязку
+            // If a previous calculation exists, schedule its detachment
             if ($case->last_calculation_id !== null && $case->last_calculation_id !== $calculationId) {
                 $this->scheduleDetachment($case->last_calculation_id);
             }
 
-            // Привязываем новый расчет
+            // Bind the new calculation
             $case->update([
                 'last_calculation_id' => $calculationId,
                 'last_calculation_hash' => $calculation->hash_id,
@@ -103,8 +103,8 @@ class CaseBindingService
     }
 
     /**
-     * Запланировать отвязку расчета (с Grace Period)
-     * 
+     * Schedule detachment of a calculation (with grace period)
+     *
      * @param int $calculationId
      * @return void
      */
@@ -132,18 +132,18 @@ class CaseBindingService
     }
 
     /**
-     * Выполнить очистку старых расчетов
-     * 
-     * Должна вызываться по cron (например, раз в сутки).
-     * Удаляет расчеты, у которых наступила дата delete_at.
-     * 
-     * @return int Количество удаленных записей
+     * Run cleanup of old calculations
+     *
+     * Should be called via cron (e.g. once per day).
+     * Deletes calculations whose delete_at date has passed.
+     *
+     * @return int Number of deleted records
      */
     public function cleanupOldCalculations(): int
     {
         $now = Carbon::now();
 
-        // Находим расчеты для удаления
+        // Find calculations due for deletion
         $calculationsToDelete = Calculation::query()
             ->whereNotNull('delete_at')
             ->where('delete_at', '<=', $now)
@@ -172,10 +172,10 @@ class CaseBindingService
     }
 
     /**
-     * Отменить запланированное удаление расчета
-     * 
-     * Используется, если расчет снова стал актуальным.
-     * 
+     * Cancel a scheduled deletion for a calculation
+     *
+     * Used when a calculation has become relevant again.
+     *
      * @param int $calculationId
      * @return void
      */
@@ -198,8 +198,8 @@ class CaseBindingService
     }
 
     /**
-     * Получить статистику по расчетам кейса
-     * 
+     * Get calculation statistics for a case
+     *
      * @param int $caseId
      * @return array
      */

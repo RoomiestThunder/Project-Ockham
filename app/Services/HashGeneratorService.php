@@ -6,10 +6,10 @@ use App\DTOs\CalculationInputDTO;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Сервис генерации стабильных Hash ID для расчетов
- * 
- * Использует DataCanonicalizer для обеспечения детерминированности хэшей.
- * Гарантирует, что одинаковые входные данные всегда дают одинаковый Hash ID.
+ * Service for generating stable Hash IDs for calculations
+ *
+ * Uses DataCanonicalizer to ensure hash determinism.
+ * Guarantees that identical input data always produces the same Hash ID.
  */
 class HashGeneratorService
 {
@@ -19,8 +19,8 @@ class HashGeneratorService
     }
 
     /**
-     * Сгенерировать Hash ID для расчета
-     * 
+     * Generate a Hash ID for a calculation
+     *
      * @param CalculationInputDTO $input
      * @return string
      */
@@ -28,7 +28,7 @@ class HashGeneratorService
     {
         $data = $input->toArray();
         
-        // Логируем для отладки (можно отключить в продакшене)
+        // Log for debugging (can be disabled in production)
         if (config('app.debug')) {
             Log::debug('Generating hash for calculation', [
                 'case_id' => $input->caseId,
@@ -40,10 +40,10 @@ class HashGeneratorService
     }
 
     /**
-     * Сгенерировать короткий Hash ID (первые 16 символов)
-     * 
-     * Используется для человекочитаемых ID в UI
-     * 
+     * Generate a short Hash ID (first 16 characters)
+     *
+     * Used for human-readable IDs in the UI
+     *
      * @param CalculationInputDTO $input
      * @return string
      */
@@ -54,8 +54,8 @@ class HashGeneratorService
     }
 
     /**
-     * Проверить, совпадают ли Hash ID для двух наборов входных данных
-     * 
+     * Check whether the Hash IDs for two sets of input data are equal
+     *
      * @param CalculationInputDTO $input1
      * @param CalculationInputDTO $input2
      * @return bool
@@ -66,8 +66,8 @@ class HashGeneratorService
     }
 
     /**
-     * Валидировать Hash ID
-     * 
+     * Validate a Hash ID
+     *
      * @param string $hashId
      * @return bool
      */

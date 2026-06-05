@@ -3,30 +3,30 @@
 namespace App\DTOs;
 
 /**
- * DTO для входных данных расчета
- * 
- * Содержит все параметры, необходимые для выполнения расчета.
- * Используется для генерации Hash ID через DataCanonicalizer.
+ * DTO for calculation input data
+ *
+ * Contains all parameters required to perform a calculation.
+ * Used for Hash ID generation via DataCanonicalizer.
  */
 class CalculationInputDTO
 {
     public function __construct(
         public readonly int $caseId,
-        public readonly string $calculationType, // 'fixed' или 'monte_carlo'
-        public readonly array $engineerParams,    // Инженерные параметры
-        public readonly array $productionParams,  // Параметры добычи
-        public readonly array $salesParams,       // Параметры продаж
+        public readonly string $calculationType, // 'fixed' or 'monte_carlo'
+        public readonly array $engineerParams,    // Engineering parameters
+        public readonly array $productionParams,  // Production parameters
+        public readonly array $salesParams,       // Sales parameters
         public readonly array $capexParams,       // CAPEX
         public readonly array $opexParams,        // OPEX
-        public readonly array $taxParams,         // Налоги
-        public readonly ?int $iterations = null,  // Для Monte Carlo: количество итераций
-        public readonly ?array $metadata = null,  // Дополнительные метаданные
+        public readonly array $taxParams,         // Taxes
+        public readonly ?int $iterations = null,  // Monte Carlo: number of iterations
+        public readonly ?array $metadata = null,  // Additional metadata
     ) {
     }
 
     /**
-     * Конвертировать в массив для хэширования
-     * 
+     * Convert to array for hashing
+     *
      * @return array
      */
     public function toArray(): array
@@ -41,13 +41,13 @@ class CalculationInputDTO
             'opex_params' => $this->opexParams,
             'tax_params' => $this->taxParams,
             'iterations' => $this->iterations,
-            // metadata не участвует в хэшировании
+            // metadata is excluded from hashing
         ];
     }
 
     /**
-     * Проверка, является ли расчет интерактивным (синхронным)
-     * 
+     * Check whether the calculation is interactive (synchronous)
+     *
      * @return bool
      */
     public function isInteractive(): bool
@@ -56,8 +56,8 @@ class CalculationInputDTO
     }
 
     /**
-     * Проверка, является ли расчет Monte Carlo (асинхронным)
-     * 
+     * Check whether the calculation is Monte Carlo (asynchronous)
+     *
      * @return bool
      */
     public function isMonteCarlo(): bool

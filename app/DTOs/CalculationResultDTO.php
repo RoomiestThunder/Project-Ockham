@@ -3,31 +3,31 @@
 namespace App\DTOs;
 
 /**
- * DTO для результата расчета
- * 
- * Содержит все рассчитанные метрики и промежуточные данные.
- * Структура одинакова для Sync и Async режимов.
+ * DTO for a calculation result
+ *
+ * Contains all computed metrics and intermediate data.
+ * Structure is identical for Sync and Async modes.
  */
 class CalculationResultDTO
 {
     public function __construct(
-        public readonly string $hashId,           // Уникальный Hash ID расчета
-        public readonly array $engineerResults,   // Результаты инженерных расчетов
-        public readonly array $productionResults, // Результаты расчета добычи
-        public readonly array $salesResults,      // Результаты расчета продаж
-        public readonly array $capexResults,      // Результаты CAPEX
-        public readonly array $opexResults,       // Результаты OPEX
-        public readonly array $taxResults,        // Результаты налоговых расчетов
-        public readonly array $finalMetrics,      // Финальные метрики (NPV, IRR, PI и т.д.)
-        public readonly ?array $distributions = null, // Для Monte Carlo: распределения результатов
-        public readonly ?int $iterationsCompleted = null, // Для Monte Carlo: завершено итераций
-        public readonly float $executionTimeSeconds = 0.0, // Время выполнения
+        public readonly string $hashId,           // Unique Hash ID of the calculation
+        public readonly array $engineerResults,   // Engineering calculation results
+        public readonly array $productionResults, // Production calculation results
+        public readonly array $salesResults,      // Sales calculation results
+        public readonly array $capexResults,      // CAPEX results
+        public readonly array $opexResults,       // OPEX results
+        public readonly array $taxResults,        // Tax calculation results
+        public readonly array $finalMetrics,      // Final metrics (NPV, IRR, PI, etc.)
+        public readonly ?array $distributions = null, // Monte Carlo: result distributions
+        public readonly ?int $iterationsCompleted = null, // Monte Carlo: iterations completed
+        public readonly float $executionTimeSeconds = 0.0, // Execution time
     ) {
     }
 
     /**
-     * Конвертировать в массив для сериализации
-     * 
+     * Convert to array for serialization
+     *
      * @return array
      */
     public function toArray(): array
@@ -48,8 +48,8 @@ class CalculationResultDTO
     }
 
     /**
-     * Получить ключевые метрики для быстрого доступа
-     * 
+     * Get key metrics for quick access
+     *
      * @return array
      */
     public function getKeyMetrics(): array

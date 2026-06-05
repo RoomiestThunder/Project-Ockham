@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Request для валидации данных расчета
+ * Request for validating calculation input data
  */
 class CalculateRequest extends FormRequest
 {
@@ -14,7 +14,7 @@ class CalculateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // TODO: добавить авторизацию (проверку прав доступа к кейсу)
+        // TODO: add authorization (access rights check for the case)
         return true;
     }
 
@@ -26,13 +26,13 @@ class CalculateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Тип расчета
+            // Calculation type
             'is_interactive' => ['required', 'boolean'],
-            
-            // Итерации (для Monte Carlo)
+
+            // Iterations (for Monte Carlo)
             'iterations' => ['nullable', 'integer', 'min:100', 'max:10000'],
-            
-            // Параметры расчетов
+
+            // Calculation parameters
             'engineer_params' => ['required', 'array'],
             'engineer_params.initial_reserves' => ['required', 'numeric', 'min:0'],
             'engineer_params.well_count' => ['required', 'integer', 'min:1'],
@@ -57,7 +57,7 @@ class CalculateRequest extends FormRequest
             'tax_params.tax_rate' => ['required', 'numeric', 'min:0', 'max:1'],
             'tax_params.mining_tax_rate' => ['required', 'numeric', 'min:0', 'max:1'],
             
-            // Метаданные (опционально)
+            // Metadata (optional)
             'metadata' => ['nullable', 'array'],
         ];
     }
@@ -68,10 +68,10 @@ class CalculateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'is_interactive.required' => 'Необходимо указать тип расчета',
-            'engineer_params.required' => 'Необходимо указать инженерные параметры',
-            'iterations.min' => 'Минимальное количество итераций для Monte Carlo: 100',
-            'iterations.max' => 'Максимальное количество итераций: 10000',
+            'is_interactive.required' => 'The calculation type is required',
+            'engineer_params.required' => 'Engineering parameters are required',
+            'iterations.min' => 'Minimum number of iterations for Monte Carlo: 100',
+            'iterations.max' => 'Maximum number of iterations: 10000',
         ];
     }
 }

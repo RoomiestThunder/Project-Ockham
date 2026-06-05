@@ -9,7 +9,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Событие ошибки расчета
+ * Event fired when a calculation fails
  */
 class CalculationFailed implements ShouldBroadcast
 {

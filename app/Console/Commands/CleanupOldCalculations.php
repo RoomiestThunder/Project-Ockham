@@ -6,10 +6,10 @@ use App\Services\CaseBindingService;
 use Illuminate\Console\Command;
 
 /**
- * Команда для очистки старых расчетов
- * 
- * Должна запускаться по расписанию (например, раз в сутки)
- * через Laravel Scheduler.
+ * Command for cleaning up old calculations
+ *
+ * Should be run on a schedule (e.g. once per day)
+ * via Laravel Scheduler.
  */
 class CleanupOldCalculations extends Command
 {
@@ -19,14 +19,14 @@ class CleanupOldCalculations extends Command
      * @var string
      */
     protected $signature = 'calculations:cleanup
-                            {--dry-run : Показать что будет удалено без фактического удаления}';
+                            {--dry-run : Show what would be deleted without actually deleting it}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Очистка старых расчетов с истекшим Grace Period';
+    protected $description = 'Clean up old calculations whose grace period has expired';
 
     public function __construct(
         private readonly CaseBindingService $bindingService
@@ -39,14 +39,14 @@ class CleanupOldCalculations extends Command
      */
     public function handle(): int
     {
-        $this->info('Начинаем очистку старых расчетов...');
+        $this->info('Starting cleanup of old calculations...');
 
         $deletedCount = $this->bindingService->cleanupOldCalculations();
 
         if ($deletedCount > 0) {
-            $this->info("✓ Удалено расчетов: {$deletedCount}");
+            $this->info("✓ Calculations deleted: {$deletedCount}");
         } else {
-            $this->info('✓ Нет расчетов для удаления');
+            $this->info('✓ No calculations to delete');
         }
 
         return Command::SUCCESS;
